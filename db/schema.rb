@@ -90,7 +90,6 @@ ActiveRecord::Schema.define(version: 2024_08_20_115735) do
     t.integer "baseappfeature_id"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
-    t.text "description"
   end
 
   create_table "user_app_documents", force: :cascade do |t|

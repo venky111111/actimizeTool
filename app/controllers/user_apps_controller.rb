@@ -1,10 +1,7 @@
 class UserAppsController < ApplicationController
    def index
-    # Add the documents association first
     @userApps = UserApp.includes(:user_app_documents).all
-    
-    # Render JSON to see if fetching with the first association is working
-    render json: @userApps, status: :ok
+        render json: @userApps, status: :ok
   end
 
 	# def create
@@ -44,6 +41,8 @@ def create
 
   if @userApp.save
     base_app = BaseApp.find(params[:base_app])
+     @userApp.update(status: 'In Process', description: base_app.description)
+
     base_app.base_app_features.each do |feature|
       user_app_feature = UserAppFeature.create(name: feature.name, user_app_id: @userApp.id)
       feature.base_app_sub_features.each do |subfeature|
