@@ -1,6 +1,6 @@
 class UsersController < ApplicationController
-	before_action :authorize_request, except: [:create, :verify_otp]
-  before_action :find_user, except: %i[create index verify_otp]
+	before_action :authorize_request, except: [:create, :verify_otp, :user_role, :forgot_password, :reset_password]
+  before_action :find_user, except: %i[create index verify_otp user_role forgot_password reset_password]
 
   def index
     @users = User.all
@@ -17,7 +17,6 @@ def create
   case type
   when "email_account"
     @user = User.new(user_params)
-
     if @user.save
       otp = rand(1000..9999)
       email_otp = EmailOtp.new(
@@ -92,22 +91,18 @@ end
 
     if user && user.email_verified?
       otp = rand(1000..9999)
-      email_otp = EmailOtp.new(
-        otp_expiry: Time.now + 10.minutes,
-        otp_number: otp,
-        user_id: user.id
-      )
+      email_otp = EmailOtp.find_by(user_id: user.id)
+      otp_send = email_otp.update(otp_expiry: Time.now + 10.minutes, otp_number: otp, user_id: user.id)
 
-      if email_otp.save
-        
-        return render json: { messages: "OTP sent successfully to email.", success: true, otp: otp, user: user }, status: :ok
+      if otp_send
+        render json: { messages: "OTP sent successfully to email.", success: true, otp: otp, user: user }, status: :ok
       else
-        return render json: { errors: email_otp.errors.full_messages, success: false }, status: :unprocessable_entity
+        render json: { errors: otp.errors.full_messages, success: false }, status: :unprocessable_entity
       end
     else
-      return render json: { errors: "Email not verified or user not found.", success: false }, status: :unprocessable_entity
+      render json: { errors: "Email not verified or user not found.", success: false }, status: :unprocessable_entity
     end
-  elsif params[:phone_number].present?
+    elsif params[:phone_number].present?
     user = User.find_by(phone_number: params[:phone_number])
 
     if user && user.mobile_verified?
@@ -127,10 +122,10 @@ end
     else
       return render json: { errors: "Phone number not verified or user not found.", success: false }, status: :unprocessable_entity
     end
-  else
-    return render json: { errors: "Email or phone number is missing.", success: false }, status: :unprocessable_entity
+    else
+      return render json: { errors: "Email or phone number is missing.", success: false }, status: :unprocessable_entity
+    end
   end
-end
 
 def verify_otp
   if params[:user_id].present?
@@ -144,7 +139,6 @@ def verify_otp
     end
     if otp 
       if otp.otp_number == params[:otp]
-    
         user.email_verified = true if params[:email].present?
         user.mobile_verified = true if params[:phone_number].present?
         if user.save
@@ -160,6 +154,30 @@ def verify_otp
     end
   else
     render json: { messages: "Please provide a user ID." }, status: :unprocessable_entity
+  end
+end
+def user_role
+  if params[:user_id].present?
+    user = User.find(params[:user_id])
+    if user 
+      if user.update(role: params[:role])
+          render json: { messages: "Role added successfully.", user: user }, status: :ok
+      else
+            render json: { messages: "There is an error Please try again later", error: user.errors.full_messages }, status: :unprocessable_entity
+      end
+
+    end
+  end
+end
+
+def reset_password
+  user = User.find(params[:user_id]);
+  if user
+    if user.update(password: params[:password], password_confirmation: params[:password_confirmation])
+         render json: { messages: 'Password updates successfully.', user: user}, status: :ok
+    else
+      render json: { messages: 'Password updation failed'}, status: :ok
+    end
   end
 end
 

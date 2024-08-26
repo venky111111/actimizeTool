@@ -28,10 +28,6 @@ def create
         )
       end
     end
-    base_app.base_app_documents.each do |doc|
-    	user_app_docs = UserAppDocument.create(user_app_file_name: doc.base_app_file_name, user_app_file_type: doc.base_app_file_type, user_app_file_data: doc.base_app_file_data, user_app_id: @userApp.id )
-    end
-
     render json: { message: "UserApp created successfully",  userAppData: @userApp }, status: :ok
   else
     render json: { message: 'Failed to create the UserApp', errors: @userApp.errors.full_messages }, status: :unprocessable_entity
@@ -182,22 +178,31 @@ def update
   if params[:step] == '5'
     if @userApp
     	@userApp.update(step: params[:step])
+      # documents_data = params[:documents]
+      # existing_document_ids = @userApp.user_app_documents.pluck(:id)
+      # provided_document_ids = documents_data.map { |doc| doc[:id] }
+      # documents_to_delete = existing_document_ids - provided_document_ids
+      # @userApp.user_app_documents.where(id: documents_to_delete).destroy_all
+      # documents_data.each do |doc_params|
+      #   if doc_params[:id].zero?
+      #     @userApp.user_app_documents.create(
+      #       user_app_file_name: doc_params[:user_app_file_name],
+      #       user_app_file_type: doc_params[:user_app_file_type],
+      #       user_app_file_data: doc_params[:user_app_file_data],
+      #       user_app_id: @userApp.id
+      #     )
+      #   end
+      # end
       documents_data = params[:documents]
-      existing_document_ids = @userApp.user_app_documents.pluck(:id)
-      provided_document_ids = documents_data.map { |doc| doc[:id] }
-      documents_to_delete = existing_document_ids - provided_document_ids
-      @userApp.user_app_documents.where(id: documents_to_delete).destroy_all
       documents_data.each do |doc_params|
-        if doc_params[:id].zero?
           @userApp.user_app_documents.create(
             user_app_file_name: doc_params[:user_app_file_name],
             user_app_file_type: doc_params[:user_app_file_type],
             user_app_file_data: doc_params[:user_app_file_data],
             user_app_id: @userApp.id
-          )
+          
         end
       end
-
       if params[:note]
         @userApp.update(note: params[:note])
       end
